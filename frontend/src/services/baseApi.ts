@@ -2,11 +2,26 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { API_ENDPOINTS, HTTP_STATUS, STORAGE_KEYS } from '../utils/constants';
 import { ApiResponse, ApiError } from '../types';
 
+// Get API URL from runtime config or environment variable
+function getApiUrl(): string {
+  // 1. Try to get from runtime config (e.g., public/config.js)
+  const runtimeConfig = (window as any).__APP_CONFIG__?.apiUrl;
+  if (runtimeConfig && !runtimeConfig.includes('your-backend.onrender.com') && !runtimeConfig.includes('your-')) {
+    return runtimeConfig;
+  }
+  // 2. Fallback to environment variable (set at build time)
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  // 3. Default to localhost for local development
+  return 'http://localhost:8000';
+}
+
 class BaseApiService {
   private api: AxiosInstance;
   private baseURL: string;
 
-  constructor(baseURL: string = process.env.REACT_APP_API_URL || 'http://localhost:8000') {
+  constructor(baseURL: string = getApiUrl()) {
     this.baseURL = baseURL;
     this.api = axios.create({
       baseURL,

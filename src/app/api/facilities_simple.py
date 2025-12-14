@@ -3,7 +3,7 @@ Simplified Facility search API endpoints.
 Basic version without complex dependencies.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -58,12 +58,22 @@ class SearchHistoryResponse(BaseModel):
 @router.post("/search")
 async def search_facilities(
     search_request: FacilitySearchRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Public search: anyone can search. No authentication required."""
     logger = logging.getLogger("facility_finder")
     t0 = time.time()
-    logger.info(f"facilities.search:start user=anon city={search_request.city} type={search_request.place_type} max={search_request.max_results}")
+    
+    # Get client IP for rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    # Handle proxy headers (X-Forwarded-For, X-Real-IP)
+    if "x-forwarded-for" in request.headers:
+        client_ip = request.headers["x-forwarded-for"].split(",")[0].strip()
+    elif "x-real-ip" in request.headers:
+        client_ip = request.headers["x-real-ip"].strip()
+    
+    logger.info(f"facilities.search:start user=anon ip={client_ip} city={search_request.city} type={search_request.place_type} max={search_request.max_results}")
     query = SearchQuery(
         place_type=search_request.place_type,
         city=search_request.city,
@@ -76,7 +86,7 @@ async def search_facilities(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
 
     try:
-        service = PlacesService(api_key=search_request.api_key)
+        service = PlacesService(api_key=search_request.api_key, client_id=client_ip)
         result = service.search_places(query)
     except HTTPException as e:
         # Re-raise HTTP exceptions from Places service

@@ -13,7 +13,7 @@ USER_AGENT = "Fitness-Facility-Finder/2.0"
 MAX_RESULTS_LIMIT = 60
 DEFAULT_MAX_RESULTS = 20
 from src.app.models.facility import Facility, SearchQuery, SearchResult, ContactInfo
-from src.app.utils.security import check_rate_limit, increment_request_count, secure_log_request
+from src.app.utils.security import check_rate_limit, increment_request_count, secure_log_request, MAX_REQUESTS_PER_SESSION
 from src.app.utils.web_scraper import scrape_website_for_contacts
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 class PlacesService:
     """Service for interacting with Google Places API."""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, client_id: str = "default"):
+        self.client_id = client_id
         self.api_key = api_key
         self.base_url = GOOGLE_PLACES_BASE_URL
     
@@ -36,14 +37,18 @@ class PlacesService:
         Returns:
             SearchResult object with found facilities
         """
-        if not check_rate_limit():
+        if not check_rate_limit(self.client_id):
+            # Get current count for better error message
+            from src.app.utils.security import _rate_limit_storage, _session_lock, MAX_REQUESTS_PER_SESSION, SESSION_TIMEOUT_MINUTES
+            with _session_lock:
+                current_count = _rate_limit_storage.get(self.client_id, {}).get('request_count', 0)
             return SearchResult(
                 facilities=[],
                 total_found=0,
                 search_query=query,
                 timestamp=time.time(),
                 success=False,
-                error_message=f"Rate limit exceeded. Maximum 50 requests per 30 minutes."
+                error_message=f"Rate limit exceeded. You have made {current_count} requests. Maximum {MAX_REQUESTS_PER_SESSION} requests per {SESSION_TIMEOUT_MINUTES} minutes. Please wait a few minutes and try again, or restart the backend to reset."
             )
         
         try:
@@ -131,8 +136,9 @@ class PlacesService:
         Returns:
             Tuple of (is_valid, message)
         """
-        if not check_rate_limit():
-            return False, f"Rate limit exceeded. Maximum 50 requests per 30 minutes."
+        if not check_rate_limit(self.client_id):
+            from src.app.utils.security import MAX_REQUESTS_PER_SESSION, SESSION_TIMEOUT_MINUTES
+            return False, f"Rate limit exceeded. Maximum {MAX_REQUESTS_PER_SESSION} requests per {SESSION_TIMEOUT_MINUTES} minutes."
         
         try:
             query = f"{place_name}, {country}"
@@ -177,7 +183,7 @@ class PlacesService:
             response.raise_for_status()
             
             data = response.json()
-            increment_request_count()
+            increment_request_count(self.client_id)
             
             if data.get('status') != 'OK':
                 error_status = data.get('status')
@@ -198,8 +204,70 @@ class PlacesService:
             places = data.get('results', [])
             all_places.extend(places)
             
-            # Skip pagination to keep responses fast; first page only
+            # Implement pagination to get all requested results
+            next_page_token = data.get('next_page_token')
+            max_pages = 3  # Limit to 3 pages (60 results) to avoid timeout
+            page_count = 1
             
+            logger.info(f"Pagination: Initial page returned {len(places)} results, max_results requested: {max_results}, next_page_token: {bool(next_page_token)}")
+            
+            # Continue fetching pages until we have enough results or no more pages
+            while len(all_places) < max_results and next_page_token and page_count < max_pages:
+                # Wait for the token to become valid (Google requires this - can take a few seconds)
+                wait_time = 3  # Increased wait time for token to become valid
+                logger.info(f"Pagination: Waiting {wait_time}s before fetching page {page_count + 1}, currently have {len(all_places)} results, need {max_results}")
+                time.sleep(wait_time)
+                
+                page_count += 1
+                params_page = {'pagetoken': next_page_token, 'key': self.api_key}
+                
+                try:
+                    response_page = requests.get(
+                        url,
+                        params=params_page,
+                        headers=headers,
+                        timeout=min(10, 20)  # Increased timeout for pagination
+                    )
+                    response_page.raise_for_status()
+                    data_page = response_page.json()
+                    increment_request_count(self.client_id)
+                    
+                    status = data_page.get('status')
+                    if status == 'OK':
+                        places_page = data_page.get('results', [])
+                        all_places.extend(places_page)
+                        next_page_token = data_page.get('next_page_token')
+                        logger.info(f"Pagination: Page {page_count} returned {len(places_page)} results, total now: {len(all_places)}, next_page_token: {bool(next_page_token)}")
+                    elif status == 'INVALID_REQUEST':
+                        # Token might not be ready yet, try one more time after longer wait
+                        logger.warning(f"Pagination: Page {page_count} returned INVALID_REQUEST (token might not be ready), retrying after longer wait...")
+                        time.sleep(5)  # Wait longer and retry once
+                        try:
+                            response_page = requests.get(url, params=params_page, headers=headers, timeout=min(10, 20))
+                            response_page.raise_for_status()
+                            data_page = response_page.json()
+                            if data_page.get('status') == 'OK':
+                                places_page = data_page.get('results', [])
+                                all_places.extend(places_page)
+                                next_page_token = data_page.get('next_page_token')
+                                logger.info(f"Pagination: Page {page_count} retry successful, returned {len(places_page)} results, total now: {len(all_places)}")
+                            else:
+                                logger.warning(f"Pagination: Page {page_count} retry failed with status {data_page.get('status')}, stopping pagination")
+                                break
+                        except Exception as retry_error:
+                            logger.warning(f"Pagination: Page {page_count} retry failed: {retry_error}, stopping pagination")
+                            break
+                    else:
+                        # If status is not OK, stop pagination
+                        error_msg = data_page.get('error_message', 'No error message')
+                        logger.warning(f"Pagination: Page {page_count} returned status {status}, stopping pagination. Error: {error_msg}")
+                        break
+                except Exception as e:
+                    logger.warning(f"Error fetching page {page_count}: {e}")
+                    break
+            
+            final_count = len(all_places[:max_results])
+            logger.info(f"Pagination: Final result count: {final_count} out of {len(all_places)} total places fetched")
             return all_places[:max_results]
             
         except requests.RequestException as e:
@@ -276,7 +344,10 @@ class PlacesService:
     def _process_places_basic(self, places: List[Dict[str, Any]], location: str, limit: int) -> List[Facility]:
         """Build basic facility info from text search results only (no details requests)."""
         facilities: List[Facility] = []
-        for place in places[: max(0, limit)]:
+        # Process all places - the limit should already be applied in _get_places_from_api
+        # Don't limit here - process all places returned by pagination
+        logger.info(f"Processing {len(places)} places (requested limit: {limit})")
+        for place in places:
             try:
                 name = place.get('name', '')
                 if not name:
@@ -361,7 +432,7 @@ class PlacesService:
     
     def _get_place_details(self, place_id: str) -> Optional[Dict[str, Any]]:
         """Get detailed information for a specific place."""
-        if not check_rate_limit():
+        if not check_rate_limit(self.client_id):
             return None
         
         url = f"{self.base_url}details/json"
@@ -391,7 +462,7 @@ class PlacesService:
             response.raise_for_status()
             
             data = response.json()
-            increment_request_count()
+            increment_request_count(self.client_id)
             
             if data.get('status') == 'OK':
                 return data.get('result', {})

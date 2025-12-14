@@ -32,7 +32,13 @@ const DEVELOPED_AND_DEVELOPING_COUNTRIES = [
   'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Ireland', 'Luxembourg', 'Iceland', 'New Zealand', 'Australia', 'Japan', 'South Korea', 'Singapore', 'Israel', 'Hong Kong', 'Taiwan',
   
   // Major Developing Countries
-  'India', 'China', 'Brazil', 'Russia', 'Mexico', 'Indonesia', 'Turkey', 'South Africa', 'Argentina', 'Chile', 'Colombia', 'Peru', 'Venezuela', 'Thailand', 'Malaysia', 'Philippines', 'Vietnam', 'Egypt', 'Nigeria', 'Kenya', 'Morocco', 'Algeria', 'Tunisia', 'Ghana', 'Ethiopia', 'Tanzania', 'Uganda', 'Bangladesh', 'Pakistan', 'Sri Lanka', 'Nepal', 'Myanmar', 'Cambodia', 'Laos', 'Mongolia', 'Kazakhstan', 'Uzbekistan', 'Ukraine', 'Poland', 'Czech Republic', 'Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Slovenia', 'Slovakia', 'Estonia', 'Latvia', 'Lithuania', 'Portugal', 'Greece', 'Cyprus', 'Malta'
+  'India', 'China', 'Brazil', 'Russia', 'Mexico', 'Indonesia', 'Turkey', 'South Africa', 'Argentina', 'Chile', 'Colombia', 'Peru', 'Venezuela', 'Thailand', 'Malaysia', 'Philippines', 'Vietnam', 'Egypt', 'Nigeria', 'Kenya', 'Morocco', 'Algeria', 'Tunisia', 'Ghana', 'Ethiopia', 'Tanzania', 'Uganda', 'Bangladesh', 'Pakistan', 'Sri Lanka', 'Nepal', 'Myanmar', 'Cambodia', 'Laos', 'Mongolia', 'Kazakhstan', 'Uzbekistan', 'Ukraine', 'Poland', 'Czech Republic', 'Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Slovenia', 'Slovakia', 'Estonia', 'Latvia', 'Lithuania', 'Portugal', 'Greece', 'Cyprus', 'Malta',
+  
+  // Middle East Countries
+  'Saudi Arabia', 'United Arab Emirates', 'Qatar', 'Kuwait', 'Bahrain', 'Oman', 'Jordan', 'Lebanon', 'Syria', 'Iraq', 'Iran', 'Yemen', 'Palestine', 'Afghanistan',
+  
+  // Additional Asia Countries (Central Asia, South Asia, Southeast Asia, East Asia)
+  'Bhutan', 'Brunei', 'East Timor', 'Maldives', 'North Korea', 'Macau', 'Kyrgyzstan', 'Tajikistan', 'Turkmenistan', 'Azerbaijan', 'Armenia', 'Georgia'
 ];
 
 // Get filtered countries
@@ -173,10 +179,44 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       } else {
         // Show detailed error from backend if available
         const backendError = err?.response?.data?.detail;
-        const displayError = backendError || err.message || 'Search failed';
-        setError(displayError);
-        console.error('Search error:', err);
-        console.error('Backend response:', err?.response?.data);
+        
+        // Check for network/CORS errors
+        if (!err.response && err.request) {
+          const apiConfig = (window as any).__APP_CONFIG__?.apiUrl || process.env.REACT_APP_API_URL || 'http://localhost:8000';
+          
+          // More detailed error message
+          let errorMsg = `Network error. Cannot connect to backend API at ${apiConfig}.\n\n`;
+          
+          if (err.code === 'ECONNREFUSED' || err.message?.includes('ECONNREFUSED')) {
+            errorMsg += '❌ Connection refused. The backend server might not be running.\n';
+            errorMsg += '   Please check: python start_backend.py';
+          } else if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
+            errorMsg += '❌ Network error. Possible causes:\n';
+            errorMsg += '   1. Backend server is not running\n';
+            errorMsg += '   2. CORS configuration issue\n';
+            errorMsg += '   3. Firewall blocking the connection\n';
+            errorMsg += `   4. Wrong API URL (current: ${apiConfig})`;
+          } else if (err.message?.includes('timeout')) {
+            errorMsg += '❌ Request timeout. The backend might be slow or unresponsive.';
+          } else {
+            errorMsg += '❌ Unknown network error. Check browser console for details.';
+          }
+          
+          setError(errorMsg);
+          console.error('🔴 Network error details:', {
+            message: err.message,
+            code: err.code,
+            apiUrl: apiConfig,
+            currentOrigin: window.location.origin,
+            request: err.request,
+            stack: err.stack,
+          });
+        } else {
+          const displayError = backendError || err.message || 'Search failed';
+          setError(displayError);
+          console.error('Search error:', err);
+          console.error('Backend response:', err?.response?.data);
+        }
       }
     } finally {
       setIsLoading(false);

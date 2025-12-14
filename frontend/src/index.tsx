@@ -22,12 +22,25 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
+// Determine basename based on environment
+// Use "/justlist" for GitHub Pages, empty for local development
+const isGitHubPages = window.location.hostname === 'techyz-software-solutions-pvt-ltd.github.io' ||
+                      window.location.hostname.includes('github.io');
+const basename = isGitHubPages ? '/justlist' : '';
+
+console.log('🌐 Router Configuration:', {
+  hostname: window.location.hostname,
+  isGitHubPages,
+  basename,
+  pathname: window.location.pathname
+});
+
 root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <BrowserRouter basename="/justlist">
+        <BrowserRouter basename={basename}>
           <App />
         </BrowserRouter>
       </ThemeProvider>

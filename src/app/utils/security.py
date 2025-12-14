@@ -4,21 +4,25 @@ Security utilities for input validation, sanitization, and rate limiting.
 
 import re
 import time
-import streamlit as st
-from typing import Tuple
+import os
+from typing import Tuple, Dict
 from datetime import datetime
 import logging
 import threading
 
 # Configuration constants (replacing deleted config.settings)
-MAX_REQUESTS_PER_SESSION = 50
-SESSION_TIMEOUT_MINUTES = 30
+# Rate limiting: Allow more requests for development (pagination makes multiple API calls per search)
+MAX_REQUESTS_PER_SESSION = int(os.getenv("MAX_REQUESTS_PER_SESSION", "500"))  # Default 500 for development
+SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30"))
 REQUEST_TIMEOUT_SECONDS = 15
 
 logger = logging.getLogger(__name__)
 
-# Thread lock for session state operations
+# Thread lock for rate limiting operations
 _session_lock = threading.Lock()
+
+# In-memory rate limiting storage (replaces Streamlit session_state)
+_rate_limit_storage: Dict[str, Dict] = {}
 
 
 def sanitize_input(text: str) -> str:
@@ -109,39 +113,53 @@ def validate_api_key(api_key: str) -> Tuple[bool, str]:
     return True, "Valid API key"
 
 
-def check_rate_limit() -> bool:
-    """Check if user has exceeded rate limits (thread-safe)."""
+def check_rate_limit(client_id: str = "default") -> bool:
+    """Check if user has exceeded rate limits (thread-safe, FastAPI-compatible)."""
     with _session_lock:
         current_time = time.time()
-        session_start = st.session_state.get('session_start', current_time)
+        
+        # Initialize client session if not exists
+        if client_id not in _rate_limit_storage:
+            _rate_limit_storage[client_id] = {
+                'request_count': 0,
+                'session_start': current_time,
+                'last_reset': 0
+            }
+        
+        session_data = _rate_limit_storage[client_id]
+        session_start = session_data.get('session_start', current_time)
         session_duration = current_time - session_start
         
         # Check if session has expired
         if session_duration > SESSION_TIMEOUT_MINUTES * 60:
             # Reset session but add cooldown period to prevent rapid resets
             cooldown_period = 60  # 1 minute cooldown
-            last_reset = st.session_state.get('last_reset', 0)
+            last_reset = session_data.get('last_reset', 0)
             
             if current_time - last_reset > cooldown_period:
-                st.session_state.request_count = 0
-                st.session_state.session_start = current_time
-                st.session_state.last_reset = current_time
+                session_data['request_count'] = 0
+                session_data['session_start'] = current_time
+                session_data['last_reset'] = current_time
                 return True
             else:
                 # Still in cooldown period
                 return False
         
         # Check current request count
-        current_count = st.session_state.get('request_count', 0)
+        current_count = session_data.get('request_count', 0)
         return current_count < MAX_REQUESTS_PER_SESSION
 
 
-def increment_request_count():
-    """Increment the request counter (thread-safe)."""
+def increment_request_count(client_id: str = "default"):
+    """Increment the request counter (thread-safe, FastAPI-compatible)."""
     with _session_lock:
-        if 'request_count' not in st.session_state:
-            st.session_state.request_count = 0
-        st.session_state.request_count += 1
+        if client_id not in _rate_limit_storage:
+            _rate_limit_storage[client_id] = {
+                'request_count': 0,
+                'session_start': time.time(),
+                'last_reset': 0
+            }
+        _rate_limit_storage[client_id]['request_count'] = _rate_limit_storage[client_id].get('request_count', 0) + 1
 
 
 def secure_log_request(operation: str, success: bool = True, error_msg: str = ""):
@@ -156,17 +174,74 @@ def secure_log_request(operation: str, success: bool = True, error_msg: str = ""
     logger.info(f"Request logged: {log_data}")
 
 
-def initialize_session_security():
-    """Initialize security-related session state variables (thread-safe)."""
+def initialize_session_security(client_id: str = "default"):
+    """Initialize security-related session variables (thread-safe, FastAPI-compatible)."""
     with _session_lock:
         current_time = time.time()
         
-        if 'request_count' not in st.session_state:
-            st.session_state.request_count = 0
-        if 'session_start' not in st.session_state:
-            st.session_state.session_start = current_time
-        if 'last_reset' not in st.session_state:
-            st.session_state.last_reset = 0
+        if client_id not in _rate_limit_storage:
+            _rate_limit_storage[client_id] = {
+                'request_count': 0,
+                'session_start': current_time,
+                'last_reset': 0
+            }
+        else:
+            # Ensure all keys exist
+            session_data = _rate_limit_storage[client_id]
+            if 'request_count' not in session_data:
+                session_data['request_count'] = 0
+            if 'session_start' not in session_data:
+                session_data['session_start'] = current_time
+            if 'last_reset' not in session_data:
+                session_data['last_reset'] = 0
+
+
+def reset_rate_limit(client_id: str = "default"):
+    """Reset rate limit for a specific client (useful for development/testing)."""
+    with _session_lock:
+        if client_id in _rate_limit_storage:
+            _rate_limit_storage[client_id] = {
+                'request_count': 0,
+                'session_start': time.time(),
+                'last_reset': time.time()
+            }
+            logger.info(f"Rate limit reset for client: {client_id}")
+            return True
+        return False
+
+
+def clear_all_rate_limits():
+    """Clear all rate limits (useful for development/testing)."""
+    with _session_lock:
+        _rate_limit_storage.clear()
+        logger.info("All rate limits cleared")
+        return True
+
+
+def get_rate_limit_status(client_id: str = "default") -> Dict:
+    """Get current rate limit status for a client."""
+    with _session_lock:
+        if client_id in _rate_limit_storage:
+            session_data = _rate_limit_storage[client_id]
+            current_time = time.time()
+            session_start = session_data.get('session_start', current_time)
+            session_duration = current_time - session_start
+            return {
+                'client_id': client_id,
+                'request_count': session_data.get('request_count', 0),
+                'max_requests': MAX_REQUESTS_PER_SESSION,
+                'session_duration_seconds': session_duration,
+                'session_timeout_minutes': SESSION_TIMEOUT_MINUTES,
+                'remaining_requests': max(0, MAX_REQUESTS_PER_SESSION - session_data.get('request_count', 0)),
+                'session_expired': session_duration > SESSION_TIMEOUT_MINUTES * 60
+            }
+        return {
+            'client_id': client_id,
+            'request_count': 0,
+            'max_requests': MAX_REQUESTS_PER_SESSION,
+            'remaining_requests': MAX_REQUESTS_PER_SESSION,
+            'session_expired': False
+        }
 
 
 def validate_search_inputs(place_type: str, city: str, country: str, max_results: int) -> Tuple[bool, str]:

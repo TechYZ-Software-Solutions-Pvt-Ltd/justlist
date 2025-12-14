@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Container, Alert, InputAdornment, IconButton } from '@mui/material';
+import { Container, Alert, InputAdornment, IconButton, Box, Typography, Paper } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
-  FormContainer, 
   FormTextField, 
   FormButton, 
   FormLink
 } from '../components/forms';
 import { validateEmail, validatePassword, validateUsername, validateFullName, validatePasswordMatch } from '../utils/formValidation';
+import { PersonAdd as RegisterIcon } from '@mui/icons-material';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -100,16 +100,59 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 4 }}>
-      <FormContainer title="Register">
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            <strong>Registration Successful!</strong>
-            <br />
-            Your account has been created. Redirecting to login page...
-          </Alert>
-        )}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: '#f8fafc',
+        backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        py: 4
+      }}
+    >
+      <Container maxWidth="sm">
+        <Paper
+          elevation={4}
+          sx={{
+            p: 4,
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+          }}
+        >
+          {/* Logo/Title Section */}
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                bgcolor: '#3b82f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 2
+              }}
+            >
+              <RegisterIcon sx={{ fontSize: 32, color: 'white' }} />
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
+              Create Account
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Join JustList to get started
+            </Typography>
+          </Box>
+
+          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+          {success && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <strong>Registration Successful!</strong>
+              <br />
+              Your account has been created. Redirecting to login page...
+            </Alert>
+          )}
 
         <form onSubmit={handleSubmit}>
           <FormTextField
@@ -195,17 +238,27 @@ const RegisterPage: React.FC = () => {
             fullWidth
             disabled={isLoading || success}
             position="center"
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              bgcolor: '#3b82f6',
+              '&:hover': { bgcolor: '#2563eb' },
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600
+            }}
           >
-            {isLoading ? 'Registering...' : success ? 'Registration Successful!' : 'Register'}
+            {isLoading ? 'Creating Account...' : success ? 'Registration Successful!' : 'Create Account'}
           </FormButton>
           
-          <FormLink to="/login">
-            Already have an account? Login here
-          </FormLink>
+          <Box sx={{ textAlign: 'center', mt: 3 }}>
+            <FormLink to="/login">
+              Already have an account? <strong>Sign in here</strong>
+            </FormLink>
+          </Box>
         </form>
-      </FormContainer>
-    </Container>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 

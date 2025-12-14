@@ -120,35 +120,46 @@ const Header: React.FC = () => {
   // Load search history for authenticated users with pagination
   const loadSearchHistory = useCallback(async (page: number = 0) => {
     if (!user) {
-      console.log('loadSearchHistory: No user, skipping');
+      console.log('[Search History] No user logged in, skipping history load');
       return;
     }
     
-    console.log('loadSearchHistory: Loading page', page, 'for user', user.username);
+    console.log('[Search History] Loading page', page, 'for user:', user.username);
+    console.log('[Search History] API URL:', process.env.REACT_APP_API_URL || 'http://localhost:8000');
     setIsLoadingHistory(true);
     try {
       const limit = 5; // Show 5 items per page
       const history = await facilitiesAPI.getHistory(page * limit, limit);
-      console.log('loadSearchHistory: Received', history.data.length, 'items');
-      setSearchHistory(history.data);
+      console.log('[Search History] API Response:', history.data);
+      console.log('[Search History] Received', history.data.length, 'items');
       
-      // Check if there are more items by requesting the next page
-      if (history.data.length === limit) {
-        try {
-          const nextPageHistory = await facilitiesAPI.getHistory((page + 1) * limit, 1);
-          // If we get any results on the next page, show pagination
-          const hasMorePages = nextPageHistory.data.length > 0;
-          setTotalHistoryPages(hasMorePages ? page + 2 : page + 1);
-        } catch {
-          // If next page request fails, assume no more pages
+      if (Array.isArray(history.data) && history.data.length > 0) {
+        setSearchHistory(history.data);
+        
+        // Check if there are more items by requesting the next page
+        if (history.data.length === limit) {
+          try {
+            const nextPageHistory = await facilitiesAPI.getHistory((page + 1) * limit, 1);
+            // If we get any results on the next page, show pagination
+            const hasMorePages = nextPageHistory.data.length > 0;
+            setTotalHistoryPages(hasMorePages ? page + 2 : page + 1);
+          } catch {
+            // If next page request fails, assume no more pages
+            setTotalHistoryPages(page + 1);
+          }
+        } else {
+          // If we got less than 5 items, this is the last page
           setTotalHistoryPages(page + 1);
         }
       } else {
-        // If we got less than 5 items, this is the last page
-        setTotalHistoryPages(page + 1);
+        console.log('[Search History] No history items found');
+        setSearchHistory([]);
+        setTotalHistoryPages(1);
       }
-    } catch (error) {
-      console.error('Failed to load search history:', error);
+    } catch (error: any) {
+      console.error('[Search History] Failed to load:', error);
+      console.error('[Search History] Error details:', error.response?.data || error.message);
+      setSearchHistory([]);
       setTotalHistoryPages(1);
     } finally {
       setIsLoadingHistory(false);
@@ -410,11 +421,24 @@ const Header: React.FC = () => {
             {!isMobile && (
               <Typography variant="h6" gutterBottom fontWeight={700}>Settings & Help</Typography>
             )}
-            <Tabs value={tabValue} onChange={handleTabChange} aria-label="settings tabs">
-              <Tab label="Listing" />
-              <Tab label="Search History" disabled={!user} />
-              <Tab label="Data Sources" disabled={!user} />
-              <Tab label="Help" />
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              aria-label="settings tabs"
+              variant={isMobile ? "scrollable" : "standard"}
+              scrollButtons={isMobile ? "auto" : false}
+              allowScrollButtonsMobile
+              sx={{
+                minHeight: isMobile ? 48 : 'auto',
+                '& .MuiTabs-scrollButtons': {
+                  '&.Mui-disabled': { opacity: 0.3 }
+                }
+              }}
+            >
+              <Tab label="Listing" sx={{ minWidth: isMobile ? 90 : 'auto' }} />
+              <Tab label="Search History" disabled={!user} sx={{ minWidth: isMobile ? 120 : 'auto' }} />
+              <Tab label="Data Sources" disabled={!user} sx={{ minWidth: isMobile ? 120 : 'auto' }} />
+              <Tab label="Help" sx={{ minWidth: isMobile ? 80 : 'auto' }} />
             </Tabs>
           </Box>
           
@@ -710,9 +734,18 @@ const Header: React.FC = () => {
                     )}
                   </Box>
                 ) : !isLoadingHistory && (
-                  <Alert severity="info">
-                    No search history yet. Your searches will appear here.
-                  </Alert>
+                  <Box>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      No search history yet. Your searches will appear here.
+                    </Alert>
+                    {!process.env.REACT_APP_API_URL && (
+                      <Alert severity="warning">
+                        <strong>Backend not configured:</strong> The app is not connected to a backend server. 
+                        Search history requires a backend connection. 
+                        Please check the deployment documentation.
+                      </Alert>
+                    )}
+                  </Box>
                 )}
               </Box>
             )}

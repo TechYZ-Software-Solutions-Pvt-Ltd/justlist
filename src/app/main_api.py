@@ -15,7 +15,7 @@ from pathlib import Path
 import json
 
 from .database.connection import create_tables
-from .api import auth, facilities_simple
+from .api import auth, facilities_simple, leads
 from .api.delete_search_history import router as delete_history_router
 
 # Create FastAPI app
@@ -115,6 +115,7 @@ if not logger.handlers:
 # Include API routers
 app.include_router(auth.router)
 app.include_router(facilities_simple.router)
+app.include_router(leads.router)
 app.include_router(delete_history_router)
 
 

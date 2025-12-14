@@ -1,0 +1,31 @@
+{
+  "name": "justlist-professional",
+  "version": "1.0.0",
+  "description": "Professional development workflow for JustList facility finder",
+  "scripts": {
+    "dev:demo": "scripts/dev-demo.bat",
+    "dev:production": "scripts/dev-production.bat",
+    "docker:demo": "scripts/docker-demo.bat",
+    "docker:production": "scripts/docker-production.bat",
+    "setup": "npm install && cd frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "test": "cd frontend && npm test",
+    "lint": "cd frontend && npm run lint",
+    "clean": "rmdir /s /q node_modules frontend\\node_modules data logs",
+    "deploy:demo": "git checkout demo && git pull && npm run dev:demo",
+    "deploy:production": "git checkout production && git pull && npm run dev:production",
+    "deploy:main": "git checkout main && git pull && npm run build"
+  },
+  "keywords": [
+    "facility-finder",
+    "google-places",
+    "react",
+    "fastapi",
+    "professional-workflow"
+  ],
+  "author": "TechYZ Software Solutions",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

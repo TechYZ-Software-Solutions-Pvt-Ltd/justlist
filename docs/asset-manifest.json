@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/justlist/static/js/main.5525ba4b.js",
+    "main.js": "/justlist/static/js/main.2be3efc4.js",
     "index.html": "/justlist/index.html",
-    "main.5525ba4b.js.map": "/justlist/static/js/main.5525ba4b.js.map"
+    "main.2be3efc4.js.map": "/justlist/static/js/main.2be3efc4.js.map"
   },
   "entrypoints": [
-    "static/js/main.5525ba4b.js"
+    "static/js/main.2be3efc4.js"
   ]
 }

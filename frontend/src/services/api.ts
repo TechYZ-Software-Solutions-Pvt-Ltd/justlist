@@ -168,3 +168,33 @@ export const facilitiesAPI = {
     api.delete('/search-history/delete-all-search-history'),
 };
 
+export const leadsAPI = {
+  // Leads CRUD
+  createLead: (leadData: any) =>
+    api.post('/leads/', leadData),
+  getLeads: (statusFilter?: string, skip = 0, limit = 50) =>
+    api.get(`/leads/?${statusFilter ? `status_filter=${statusFilter}&` : ''}skip=${skip}&limit=${limit}`),
+  getLead: (leadId: number) =>
+    api.get(`/leads/${leadId}`),
+  updateLead: (leadId: number, leadData: any) =>
+    api.put(`/leads/${leadId}`, leadData),
+  deleteLead: (leadId: number) =>
+    api.delete(`/leads/${leadId}`),
+  
+  // Statistics
+  getStats: () =>
+    api.get('/leads/stats'),
+  
+  // Activities
+  createActivity: (leadId: number, activityData: any) =>
+    api.post(`/leads/${leadId}/activities`, activityData),
+  getActivities: (leadId: number) =>
+    api.get(`/leads/${leadId}/activities`),
+  
+  // Reminders
+  createReminder: (leadId: number, reminderData: any) =>
+    api.post(`/leads/${leadId}/reminders`, reminderData),
+  getUpcomingReminders: (days = 7) =>
+    api.get(`/leads/reminders/upcoming?days=${days}`),
+};
+

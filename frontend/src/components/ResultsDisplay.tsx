@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -9,11 +9,19 @@ import {
   Link,
   Grid,
   Paper,
-  Button
+  Button,
+  IconButton,
+  Snackbar,
+  Alert,
+  CardActions
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { LocationOn, Star, Language } from '@mui/icons-material';
 import Phone from '@mui/icons-material/Phone';
+import { leadsAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Facility {
   name: string;
@@ -38,9 +46,57 @@ interface ResultsDisplayProps {
 }
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
+  const { user } = useAuth();
+  const [addedLeads, setAddedLeads] = useState<Set<string>>(new Set());
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  
   if (!results) {
     return null;
   }
+  
+  const handleAddToLeads = async (facility: Facility) => {
+    if (!user) {
+      setSnackbar({
+        open: true,
+        message: 'Please login to add leads',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    try {
+      await leadsAPI.createLead({
+        name: facility.name,
+        phone: (facility as any).international_phone_number || (facility as any).formatted_phone_number,
+        email: (facility as any).email,
+        address: facility.address,
+        website: facility.website,
+        rating: facility.google_rating,
+        notes: `Added from search: ${facility.location}`
+      });
+      
+      setAddedLeads(prev => new Set(prev).add(facility.place_id));
+      setSnackbar({
+        open: true,
+        message: `${facility.name} added to leads!`,
+        severity: 'success'
+      });
+    } catch (error: any) {
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.detail || 'Failed to add lead',
+        severity: 'error'
+      });
+    }
+  };
+  
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   if (!results.success || results.facilities.length === 0) {
     return (
@@ -185,10 +241,37 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                   sx={{ mt: 1 }}
                 />
               </CardContent>
+              
+              {user && (
+                <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
+                  <Button
+                    variant={addedLeads.has(facility.place_id) ? "outlined" : "contained"}
+                    color={addedLeads.has(facility.place_id) ? "success" : "primary"}
+                    startIcon={addedLeads.has(facility.place_id) ? <CheckCircleIcon /> : <AddCircleOutlineIcon />}
+                    onClick={() => handleAddToLeads(facility)}
+                    disabled={addedLeads.has(facility.place_id)}
+                    fullWidth
+                    size="small"
+                  >
+                    {addedLeads.has(facility.place_id) ? 'Added to Leads' : 'Add to Leads'}
+                  </Button>
+                </CardActions>
+              )}
             </Card>
           </Grid>
         ))}
       </Grid>
+      
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

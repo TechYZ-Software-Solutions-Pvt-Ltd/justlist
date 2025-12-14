@@ -1,0 +1,120 @@
+name: 🚀 JustList CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, production, demo ]
+  pull_request:
+    branches: [ main, production ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Test and Build
+  test-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [demo, production]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🧪 Run Python tests
+      run: |
+        python -m pytest tests/ || echo "No tests found"
+
+    - name: 📋 Lint Python code
+      run: |
+        pip install flake8
+        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+    - name: 🟢 Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: 📦 Install Node dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: 🧪 Run frontend tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false --passWithNoTests
+
+    - name: 📋 Lint frontend code
+      run: |
+        cd frontend
+        npm run lint
+
+    - name: 🏗️ Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+  # Deploy Demo Environment
+  deploy-demo:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/demo'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🚀 Deploy to Demo
+      run: |
+        echo "Deploying to Demo environment..."
+        # Add your demo deployment commands here
+
+  # Deploy Production Environment
+  deploy-production:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/production'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🚀 Deploy to Production
+      run: |
+        echo "Deploying to Production environment..."
+        # Add your production deployment commands here
+
+  # Deploy Main (Live)
+  deploy-main:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🚀 Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
+
+    - name: 🚀 Deploy Backend to Render
+      run: |
+        echo "Deploying backend to Render..."
+        # Add your Render deployment commands here

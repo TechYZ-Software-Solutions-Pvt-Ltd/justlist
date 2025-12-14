@@ -1,0 +1,52 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Node
+frontend/node_modules
+frontend/build
+frontend/.env
+node_modules
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+docs/
+*.md
+LICENSE
+
+# Deployment
+deploy-*.bat
+deploy-*.sh
+.vercelignore
+.github
+
+# Data
+data/*.db
+logs/
+
+# Build
+build/
+dist/
+*.egg-info/
+

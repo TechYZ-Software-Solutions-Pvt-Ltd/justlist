@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      args:
+        ENV: demo
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=demo
+    env_file:
+      - configs/demo.env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - justlist-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Development Server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        ENV: demo
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_ENV=demo
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    networks:
+      - justlist-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Database (SQLite - file-based)
+  database:
+    image: alpine:latest
+    volumes:
+      - ./data:/data
+    networks:
+      - justlist-network
+    command: ["sh", "-c", "mkdir -p /data && tail -f /dev/null"]
+
+networks:
+  justlist-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

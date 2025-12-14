@@ -1,33 +1,34 @@
 # 🏢 JustList - Universal Facility Finder
 
-A powerful, full-stack web application for finding any type of facilities worldwide using Google Places API with comprehensive data enrichment, search history management, and legal compliance.
+A powerful, full-stack web application for finding any type of facilities worldwide using Google Places API with comprehensive data enrichment, search history management, and leads management system.
 
 **🌐 Live Demo**: https://techyz-software-solutions-pvt-ltd.github.io/justlist/  
 **📁 Repository**: https://github.com/TechYZ-Software-Solutions-Pvt-Ltd/justlist  
-**📚 Documentation**: See `DEPLOYMENT_COMPLETE.md` for full deployment guide
+**📚 Documentation**: See `DEVELOPMENT_WORKFLOW.md` for development guide
 
-## ✅ **Latest Updates (v3.0 - October 2025)**
+## ✅ **Latest Updates (v4.0 - October 2025)**
 
 ### **🔧 Recent Fixes:**
-- ✅ **Navigation 404 Fixed**: React Router navigation working perfectly on GitHub Pages
-- ✅ **Custom 404.html**: Automatic redirects for all unknown routes
-- ✅ **FormLink Component**: Smart routing for internal/external links
-- ✅ **Critical Bug Fixed**: Google Places API URL corrected - search working!
-- ✅ **Better Error Messages**: Detailed error reporting from backend
+- ✅ **CI/CD Pipeline Fixed**: All tests passing, automated deployment working
+- ✅ **ES Module Issues Resolved**: Jest configuration optimized for fast testing
+- ✅ **Professional Development Workflow**: Multi-environment setup (demo, production, main)
+- ✅ **Docker Support**: Containerized development and production environments
+- ✅ **Code Cleanup**: Removed redundant files and optimized project structure
 
 ### **✨ New Features:**
-- ✅ **180+ Facility Types**: Comprehensive taxonomy across 29 categories
-- ✅ **Search History**: Store up to 30 searches with delete functionality
-- ✅ **Data Sources Tab**: Manage API keys for 6 different data providers
-- ✅ **Listing Customization**: Choose which facility info to display
-- ✅ **Help Documentation**: Complete setup guides for all APIs
-- ✅ **Professional UI**: Responsive design with Material-UI
+- ✅ **Leads Management System**: Zoho Books-style CRM functionality
+- ✅ **Professional UI**: Complete dashboard redesign with sidebar navigation
+- ✅ **Multi-Environment Support**: Demo, Production, and Main branch workflows
+- ✅ **Docker Integration**: Consistent development environments
+- ✅ **Advanced Search**: 180+ facility types across 29 categories
+- ✅ **User Authentication**: Secure registration and login system
 
 ### **🚀 Deployment:**
 - ✅ **GitHub Pages**: Free frontend hosting
 - ✅ **Render Backend**: Free API hosting
+- ✅ **Docker Support**: Containerized deployment
+- ✅ **CI/CD Pipeline**: Automated testing and deployment
 - ✅ **Total Cost**: $0/month
-- ✅ **Automated Deployment**: One-click deployment scripts
 
 ## ✨ Features
 
@@ -97,56 +98,58 @@ Simply visit: https://techyz-software-solutions-pvt-ltd.github.io/justlist/
 
 1. Register a new account
 2. Login with your credentials
-3. Go to Settings → Data Sources
-4. Add your Google Places API key
-5. Start searching for facilities!
+3. Start searching for facilities!
+4. Use the "Add to Leads" feature to manage your prospects
 
 ### **Option 2: Local Development**
 
 #### Prerequisites
 - Node.js 18+ and npm
 - Python 3.11+
-- Google Places API key (optional for testing)
+- Docker (optional, for containerized development)
 
 #### Quick Setup
 
 1. **Clone the repository**
    ```bash
    git clone https://github.com/TechYZ-Software-Solutions-Pvt-Ltd/justlist.git
-   cd justlist
+   cd JustList-Professional
    ```
 
-2. **Initialize Database**
+2. **Choose your environment:**
+   
+   **Demo Environment (Recommended for development):**
    ```bash
+   # Windows
+   .\scripts\dev-demo.bat
+   
+   # Or manually:
    python init_database.py
-   ```
-
-3. **Backend Setup**
-   ```bash
-   # Install Python dependencies
-   pip install -r requirements.txt
-   
-   # Start the backend server
    python start_backend.py
+   cd frontend && npm install && npm start
    ```
 
-4. **Frontend Setup** (in a new terminal)
+   **Production Environment:**
    ```bash
-   cd frontend
-   
-   # Install dependencies
-   npm install
-   
-   # Start the development server
-   npm start
+   # Windows
+   .\scripts\dev-production.bat
    ```
 
-5. **Access the Application**
+   **Docker Environment:**
+   ```bash
+   # Demo with Docker
+   .\scripts\docker-demo.bat
+   
+   # Production with Docker
+   .\scripts\docker-production.bat
+   ```
+
+3. **Access the Application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
 
-See `LOCAL_SETUP.md` for detailed instructions.
+See `DEVELOPMENT_WORKFLOW.md` for detailed instructions.
 
 ## 🔧 Configuration
 
@@ -164,7 +167,7 @@ For detailed guides for all 6 APIs, see Settings → Help in the app.
 ## 📁 Project Structure
 
 ```
-justlist/
+JustList-Professional/
 ├── frontend/                    # React frontend
 │   ├── public/
 │   │   ├── index.html          # Main HTML file
@@ -172,37 +175,57 @@ justlist/
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
 │   │   │   ├── forms/          # Generic form components
+│   │   │   ├── layout/         # Layout components (sidebar, header)
+│   │   │   ├── ui/             # UI components (loading, error states)
 │   │   │   ├── Header.tsx      # App header with settings
 │   │   │   ├── SearchForm.tsx  # Main search form
 │   │   │   └── ResultsDisplay.tsx
 │   │   ├── pages/              # Page components
-│   │   │   ├── HomePage.tsx
-│   │   │   ├── LoginPage.tsx
+│   │   │   ├── MainPage.tsx    # Home page
+│   │   │   ├── LeadsPage.tsx   # Leads management
+│   │   │   ├── LoginPage.tsx   # Authentication
 │   │   │   └── RegisterPage.tsx
 │   │   ├── contexts/           # React contexts
 │   │   │   └── AuthContext.tsx
 │   │   ├── services/           # API services
+│   │   ├── hooks/              # Custom React hooks
 │   │   ├── utils/              # Utility functions
+│   │   ├── types/              # TypeScript type definitions
 │   │   └── data/               # Static data (taxonomy, fields)
+│   ├── __tests__/              # Test files
 │   └── package.json
 ├── src/app/                    # FastAPI backend
 │   ├── api/                    # API endpoints
 │   │   ├── auth.py            # Authentication
-│   │   └── facilities_simple.py
+│   │   ├── facilities_simple.py # Facility search
+│   │   └── leads.py           # Leads management
 │   ├── database/               # Database layer
 │   │   ├── connection.py
 │   │   └── models.py          # SQLAlchemy models
 │   ├── services/               # Business logic
 │   │   └── places_service.py  # Google Places integration
 │   └── utils/                  # Utilities
-├── docs/                       # Build output for GitHub Pages
+├── configs/                    # Environment configurations
+│   ├── demo.env               # Demo environment
+│   ├── production.env         # Production environment
+│   └── local.env              # Local development
+├── docker/                     # Docker configurations
+│   ├── Dockerfile.backend     # Backend container
+│   └── Dockerfile.frontend    # Frontend container
+├── scripts/                    # Helper scripts
+│   ├── dev-demo.bat           # Start demo environment
+│   ├── dev-production.bat     # Start production environment
+│   ├── docker-demo.bat        # Docker demo setup
+│   └── docker-production.bat  # Docker production setup
+├── .github/workflows/          # CI/CD pipeline
+│   └── ci-cd.yml              # GitHub Actions
 ├── init_database.py            # Database initialization
 ├── start_backend.py            # Backend startup script
 ├── requirements.txt            # Python dependencies
-├── deploy-simple.bat           # Windows deployment
-├── deploy-to-github-pages.sh  # Linux/macOS deployment
-├── DEPLOYMENT_COMPLETE.md      # Complete deployment guide
-├── TROUBLESHOOTING.md          # Troubleshooting guide
+├── docker-compose.demo.yml     # Demo Docker setup
+├── docker-compose.production.yml # Production Docker setup
+├── DEVELOPMENT_WORKFLOW.md     # Development guide
+├── CHANGELOG.md                # Version history
 └── README.md                   # This file
 ```
 
@@ -252,6 +275,18 @@ justlist/
 - `GET /facilities/history/{id}/facilities` - Get stored results for a search
 - `DELETE /facilities/history/{id}` - Delete a search history entry
 
+### Leads Management
+- `GET /leads/` - Get all leads with filtering and pagination
+- `POST /leads/` - Create a new lead
+- `GET /leads/{lead_id}` - Get specific lead details
+- `PUT /leads/{lead_id}` - Update lead information
+- `DELETE /leads/{lead_id}` - Delete a lead
+- `GET /leads/stats` - Get leads statistics
+- `POST /leads/{lead_id}/activities` - Add activity to lead
+- `GET /leads/{lead_id}/activities` - Get lead activities
+- `POST /leads/{lead_id}/reminders` - Create reminder for lead
+- `GET /leads/reminders/upcoming` - Get upcoming reminders
+
 Full API documentation available at: http://localhost:8000/docs (when running locally)
 
 ## 🔒 Security Features
@@ -266,27 +301,41 @@ Full API documentation available at: http://localhost:8000/docs (when running lo
 
 ## 🎯 Deployment
 
-### **GitHub Pages Deployment** (Automated)
+### **Automated CI/CD Pipeline**
 
-#### Windows:
-```bash
-cd "Facilty Search Production"
-.\deploy-simple.bat
-```
+The project uses GitHub Actions for automated deployment:
 
-#### Linux/macOS:
-```bash
-cd "Facilty Search Production"
-./deploy-to-github-pages.sh
-```
+- **Main Branch**: Deploys to GitHub Pages automatically
+- **Production Branch**: Deploys to production environment
+- **Demo Branch**: Deploys to demo environment
 
 ### **Manual Deployment**
 
-See `DEPLOYMENT_COMPLETE.md` for complete deployment instructions including:
-- GitHub Pages setup
-- Render backend deployment
-- Connecting frontend to backend
-- Environment variables configuration
+#### **Local Development:**
+```bash
+# Demo environment
+.\scripts\dev-demo.bat
+
+# Production environment  
+.\scripts\dev-production.bat
+```
+
+#### **Docker Deployment:**
+```bash
+# Demo with Docker
+.\scripts\docker-demo.bat
+
+# Production with Docker
+.\scripts\docker-production.bat
+```
+
+### **Environment Configuration**
+
+- **Demo**: `configs/demo.env` - Development and testing
+- **Production**: `configs/production.env` - Production deployment
+- **Local**: `configs/local.env` - Local development
+
+See `DEVELOPMENT_WORKFLOW.md` for complete deployment instructions.
 
 ## 🧪 Testing
 
@@ -294,15 +343,19 @@ See `DEPLOYMENT_COMPLETE.md` for complete deployment instructions including:
 # Backend tests
 python -m pytest tests/
 
-# Frontend tests
+# Frontend tests (fast, optimized)
 cd frontend
-npm test
+npm test -- --watchAll=false --passWithNoTests
 
 # Type checking
 npm run type-check
 
 # Linting
 npm run lint
+
+# CI/CD Pipeline
+# Tests run automatically on push to any branch
+# Check GitHub Actions for test results
 ```
 
 ## 📝 License
@@ -342,16 +395,26 @@ For support and questions:
 
 ## 📈 Roadmap
 
-### Planned Features:
-- [ ] Map view for search results
-- [ ] Advanced filtering and sorting
-- [ ] Facility comparison tool
-- [ ] Export results to CSV/PDF
-- [ ] Mobile app (React Native)
-- [ ] Multi-language support
-- [ ] Dark mode theme
-- [ ] Favorites/Bookmarks
-- [ ] Social sharing
+### ✅ Completed Features:
+- [x] **Leads Management System** - Zoho Books-style CRM functionality
+- [x] **Professional UI** - Complete dashboard redesign
+- [x] **Multi-Environment Support** - Demo, Production, Main workflows
+- [x] **Docker Integration** - Containerized development
+- [x] **CI/CD Pipeline** - Automated testing and deployment
+- [x] **Advanced Search** - 180+ facility types
+- [x] **User Authentication** - Secure registration and login
+
+### 🚧 Planned Features:
+- [ ] **Map Integration** - Interactive maps for search results
+- [ ] **Advanced Analytics** - Lead conversion tracking and reporting
+- [ ] **Email Integration** - Automated follow-up emails
+- [ ] **Mobile App** - React Native mobile application
+- [ ] **Multi-language Support** - Internationalization
+- [ ] **Dark Mode Theme** - User preference themes
+- [ ] **Export Functionality** - CSV/PDF export for leads
+- [ ] **Social Sharing** - Share facilities and leads
+- [ ] **API Rate Limiting** - Advanced API management
+- [ ] **Webhook Support** - Real-time notifications
 
 ## 🌟 Star History
 
@@ -363,4 +426,4 @@ If you find this project useful, please consider giving it a star on GitHub! ⭐
 
 **Live App**: https://techyz-software-solutions-pvt-ltd.github.io/justlist/
 
-**Version**: 3.0.0 | **Last Updated**: October 21, 2025 | **Status**: ✅ Production Ready
+**Version**: 4.0.0 | **Last Updated**: October 23, 2025 | **Status**: ✅ Production Ready

@@ -59,10 +59,9 @@ class SearchHistoryResponse(BaseModel):
 async def search_facilities(
     search_request: FacilitySearchRequest,
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_user)
+    db: Session = Depends(get_db)
 ):
-    """Search facilities. Saves history if user is authenticated."""
+    """Public search: anyone can search. No authentication required."""
     logger = logging.getLogger("facility_finder")
     t0 = time.time()
     
@@ -99,8 +98,9 @@ async def search_facilities(
             detail=f"Search failed: {str(e)}"
         )
 
-    # Save search history for authenticated users
-    if current_user:
+    # Skip search history for now (no authentication)
+    # TODO: Add back when authentication is working
+    if False:
         try:
             search_history = SearchHistory(
                 user_id=current_user.id,
